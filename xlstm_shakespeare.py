@@ -80,7 +80,7 @@ def generate(model, config, idx, max_new_tokens):
 
 yaml_cfg ="""
 training:
-  batch_size: 64
+  batch_size: 16
   lr: 0.001
   eval_interval: 100
   num_steps: 1000
@@ -92,19 +92,20 @@ training:
 
 model:
   num_blocks: 2
-  embedding_dim: 64
+  embedding_dim: 32
   mlstm_block:
     mlstm:
-      num_heads: 1
+      num_heads: 4
   slstm_block:
     slstm:
-      num_heads: 1
+      num_heads: 4
   slstm_at: [1]
+  dropout: 0.2
   context_length: ${dataset.context_length}
 
 dataset:
   name: tinyshakespeare
-  context_length: 16
+  context_length: 8
 """
 #train_data, val_data, vocab_size, decode = load_data()
 
@@ -154,8 +155,9 @@ for step in range(config.training.num_steps):
             gpu_utilization.append(torch.cuda.utilization())
 
 end_time = time.time()
-print("=== Finished ===")
-print(f"{config.training.num_steps} steps, {num_params} M parameters, final losses: {losses['train']:.4f} train, {losses['val']:.4f} val")
+print("=== Finished (XLSTM) ===")
+print(f"{config.training.num_steps} steps, {config.training.batch_size} batch size, final losses: {losses['train']:.4f} train, {losses['val']:.4f} val")
+print(f"{num_params:,} parameters, {config.dataset.context_length} context length")
 print(f"{sum(gpu_utilization)/len(gpu_utilization):.1f}% average GPU utilization")
 print("Wall clock time elapsed: %.2f seconds" % (end_time-start_time))
 

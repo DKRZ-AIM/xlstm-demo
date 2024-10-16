@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import time
 
 # Hyperparameters
-batch_size = 4 # how many independent sequences will we process in parallel?
+batch_size = 16 # how many independent sequences will we process in parallel?
 block_size = 8 # what is the maximum context length for predictions?
 max_iters = 1000
 eval_interval = 100
@@ -193,19 +194,23 @@ train_data = data[:n]
 val_data = data[n:]
 
 model = GPTLanguageModel()
-m = model.to(device)
+model = model.to(device)
 
-# print the number of parameters in the model
-print(sum(p.numel() for p in m.parameters())/1e6, 'M parameters')
+num_params = sum(p.numel() for p in model.parameters())
+print(num_params, ' parameters')
 
 # create a PyTorch optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+gpu_utilization = []
+
+start_time = time.time()
 
 for iter in range(max_iters):
     # every once in a while evaluate the loss on train and val sets
     if iter % eval_interval == 0 or iter == max_iters - 1:
         losses = estimate_loss()
         print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        gpu_utilization.append(torch.cuda.utilization())
 
     # sample a batch of data
     xb, yb = get_batch('train')
@@ -216,6 +221,13 @@ for iter in range(max_iters):
     loss.backward()
     optimizer.step()
 
+end_time = time.time()
+print("=== Finished (Transformer) ===")
+print(f"{max_iters} steps, {batch_size} batch size, final losses: {losses['train']:.4f} train, {losses['val']:.4f} val")
+print(f"{num_params:,} parameters, {block_size} context length")
+print(f"{sum(gpu_utilization)/len(gpu_utilization):.1f}% average GPU utilization")
+print("Wall clock time elapsed: %.2f seconds" % (end_time-start_time))
+
 # generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
+print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
