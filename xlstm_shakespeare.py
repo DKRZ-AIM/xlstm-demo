@@ -108,6 +108,7 @@ dataset:
 """
 #train_data, val_data, vocab_size, decode = load_data()
 
+torch.manual_seed(42)
 
 config = OmegaConf.create(yaml_cfg)
 OmegaConf.resolve(config)
