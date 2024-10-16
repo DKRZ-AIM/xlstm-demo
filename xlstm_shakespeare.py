@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from torch.utils.data import Dataset, DataLoader
 
 from xlstm.xlstm_lm_model import xLSTMLMModel, xLSTMLMModelConfig
 from omegaconf import OmegaConf
 from dacite import from_dict
+
+import time
 
 import numpy as np
 
@@ -116,11 +117,14 @@ config.model.vocab_size = vocab_size
 model = xLSTMLMModel(from_dict(xLSTMLMModelConfig, OmegaConf.to_container(config.model))).to(device=config.training.device)
 model.reset_parameters()
 model = model.to(dtype=torch_dtype_map[config.training.weight_precision])
-print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
-print("len(model.parameters()): ", len(list(model.parameters())))
+num_params = sum(p.numel() for p in model.parameters())
+print(num_params/1e6, 'M parameters')
 
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.AdamW(model.parameters(), lr=config.training.lr)
+gpu_utilization = []
+
+start_time = time.time()
 
 for step in range(config.training.num_steps):
 
@@ -146,7 +150,13 @@ for step in range(config.training.num_steps):
         if step % config.training.eval_interval == 0 or iter == config.training.num_steps - 1:
             losses = estimate_loss(model, train_data, val_data, config)
             print(f"step {step}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+            gpu_utilization.append(torch.cuda.utilization())
 
+end_time = time.time()
+print("=== Finished ===")
+print(f"{config.training.num_steps} steps, {num_params} M parameters, final losses: {losses['train']:.4f} train, {losses['val']:.4f} val")
+print(f"{sum(gpu_utilization)/len(gpu_utilization):.1f}% average GPU utilization")
+print("Wall clock time elapsed: %.2f seconds" % (end_time-start_time))
 
 # Generate an example text
 context = torch.zeros((1, 1), dtype=torch.long, device=config.training.device)
