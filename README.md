@@ -9,8 +9,11 @@ The intention was to change nothing aside the actual NN architecture and layers 
 ## From transformers to xlstm
 
 To understand the history of this repository, start by looking into the original Transformers repo by Danu Caus.
+
 The demo notebook "mini_gpt.ipynb" from that repo was migrated into a Python module "transformer_shakespeare.py". No changes were made other than transferring the Python code.
+
 The core implementation of xLSTM was copied into the repo; it can be found in the xlstm subfolder.
+
 The new module "xlstm_shakespeare.py" is the merger of the xLSTM architecture into the original transformer demo. Run this to generate shakespeare language samples based on the xLSTM architecture.
 
 ## Acknowledgments
